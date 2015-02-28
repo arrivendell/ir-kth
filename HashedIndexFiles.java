@@ -22,6 +22,7 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.Math;
 
 /**
  *   Implements an inverted index as a Hashtable from words to PostingsLists.
@@ -171,6 +172,7 @@ public class HashedIndexFiles implements Index, Serializable {
             return searchPhrase( query, rankingType, structureType);
 
             case Index.RANKED_QUERY :
+            //System.out.println("coucou");
             return searchRank( query, rankingType, structureType);
             default:
             break;
@@ -180,7 +182,34 @@ public class HashedIndexFiles implements Index, Serializable {
     }
 
     private PostingsList searchRank(Query query, int rankingType, int structureType){
-        return null;
+         //case of null query
+        if(query.size() == 0){
+            return null;
+        }
+
+        PostingsList listReference = getPostings(query.terms.get(0));
+
+        int dFt = listReference.size(); 
+            System.out.println(dFt);
+        if(listReference == null){
+            return null;
+        }
+        for(int i = 0; i< listReference.size(); i++){
+            PostingsEntry temp = listReference.get(i);
+            int tFdt =  temp.offsetList.size();
+            System.out.println(tFdt);
+            int lenD = this.docLengths.get(Integer.toString(temp.docID));
+            System.out.println(lenD);
+            int n = docIDs.keySet().size();
+            System.out.println(n);
+            double iDFt = Math.log((double)n/dFt);
+            System.out.println(iDFt);
+            temp.score = ( tFdt * iDFt ) / lenD;
+        }
+
+        listReference.sort();
+
+        return listReference;
     }
 
     private PostingsList searchIntersection(Query query, int rankingType, int structureType){

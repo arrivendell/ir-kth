@@ -10,6 +10,7 @@ package ir;
 
 import java.util.LinkedList;
 import java.io.Serializable;
+import java.util.Collections;
 
 
 /**
@@ -36,6 +37,9 @@ public class PostingsList implements Serializable {
          list.remove(i);
      }
 
+     public void sort(){
+        Collections.sort(list);
+     }
      public void insertElement(int docID, double score, int offset){
 
         //if we are in the right order, last docID should be smaller thant new docID
