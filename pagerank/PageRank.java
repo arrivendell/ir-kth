@@ -67,17 +67,17 @@ public class PageRank{
      */
     final static int MAX_NUMBER_OF_ITERATIONS = 1000;
 
-    
+    private int highestDocNum = 0 ;
     /* --------------------------------------------- */
 
 
     public PageRank( String filename ) {
-	int noOfDocs = readDocs( filename );
-	computePagerank( noOfDocs );
-    }
+       int noOfDocs = readDocs( filename );
+       computePagerank( noOfDocs );
+   }
 
 
-    /* --------------------------------------------- */
+   /* --------------------------------------------- */
 
 
     /**
@@ -90,89 +90,164 @@ public class PageRank{
      *   @return the number of documents read.
      */
     int readDocs( String filename ) {
-	int fileIndex = 0;
-	try {
-	    System.err.print( "Reading file... " );
-	    BufferedReader in = new BufferedReader( new FileReader( filename ));
-	    String line;
-	    while ((line = in.readLine()) != null && fileIndex<MAX_NUMBER_OF_DOCS ) {
-		int index = line.indexOf( ";" );
-		String title = line.substring( 0, index );
-		Integer fromdoc = docNumber.get( title );
+       int fileIndex = 0;
+       try {
+           System.err.print( "Reading file... " );
+           BufferedReader in = new BufferedReader( new FileReader( filename ));
+           String line;
+           while ((line = in.readLine()) != null && fileIndex<MAX_NUMBER_OF_DOCS ) {
+              int index = line.indexOf( ";" );
+              String title = line.substring( 0, index );
+              Integer fromdoc = docNumber.get( title );
 		//  Have we seen this document before?
-		if ( fromdoc == null ) {	
+              if ( fromdoc == null ) {	
 		    // This is a previously unseen doc, so add it to the table.
-		    fromdoc = fileIndex++;
-		    docNumber.put( title, fromdoc );
-		    docName[fromdoc] = title;
-		}
+                  fromdoc = fileIndex++;
+                  docNumber.put( title, fromdoc );
+                  docName[fromdoc] = title;
+            //update highest doc
+                  highestDocNum = (fromdoc > highestDocNum) ? fromdoc : highestDocNum;
+              }
 		// Check all outlinks.
-		StringTokenizer tok = new StringTokenizer( line.substring(index+1), "," );
-		while ( tok.hasMoreTokens() && fileIndex<MAX_NUMBER_OF_DOCS ) {
-		    String otherTitle = tok.nextToken();
-		    Integer otherDoc = docNumber.get( otherTitle );
-		    if ( otherDoc == null ) {
+              StringTokenizer tok = new StringTokenizer( line.substring(index+1), "," );
+              while ( tok.hasMoreTokens() && fileIndex<MAX_NUMBER_OF_DOCS ) {
+                  String otherTitle = tok.nextToken();
+                  Integer otherDoc = docNumber.get( otherTitle );
+                  if ( otherDoc == null ) {
 			// This is a previousy unseen doc, so add it to the table.
-			otherDoc = fileIndex++;
-			docNumber.put( otherTitle, otherDoc );
-			docName[otherDoc] = otherTitle;
-		    }
+                     otherDoc = fileIndex++;
+                     docNumber.put( otherTitle, otherDoc );
+                     docName[otherDoc] = otherTitle;
+            //update highest doc
+                     highestDocNum = (otherDoc > highestDocNum) ? otherDoc : highestDocNum;
+                 }
 		    // Set the probability to 0 for now, to indicate that there is
 		    // a link from fromdoc to otherDoc.
-		    if ( link.get(fromdoc) == null ) {
-			link.put(fromdoc, new HashSet<Integer>());
-		    }
-		    if ( link.get(fromdoc).contains(otherDoc) == false ) {
-			link.get(fromdoc).add( otherDoc );
-			out[fromdoc]++;
-		    }
-		}
-	    }
-	    if ( fileIndex >= MAX_NUMBER_OF_DOCS ) {
-		System.err.print( "stopped reading since documents table is full. " );
-	    }
-	    else {
-		System.err.print( "done. " );
-	    }
+                 if ( link.get(fromdoc) == null ) {
+                     link.put(fromdoc, new HashSet<Integer>());
+                 }
+                 if ( link.get(fromdoc).contains(otherDoc) == false ) {
+                     link.get(fromdoc).add( otherDoc );
+                     out[fromdoc]++;
+                 }
+             }
+         }
+         if ( fileIndex >= MAX_NUMBER_OF_DOCS ) {
+          System.err.print( "stopped reading since documents table is full. " );
+      }
+      else {
+          System.err.print( "done. " );
+      }
 	    // Compute the number of sinks.
-	    for ( int i=0; i<fileIndex; i++ ) {
-		if ( out[i] == 0 )
-		    numberOfSinks++;
-	    }
-	}
-	catch ( FileNotFoundException e ) {
-	    System.err.println( "File " + filename + " not found!" );
-	}
-	catch ( IOException e ) {
-	    System.err.println( "Error reading file " + filename );
-	}
-	System.err.println( "Read " + fileIndex + " number of documents" );
-	return fileIndex;
-    }
+      for ( int i=0; i<fileIndex; i++ ) {
+          if ( out[i] == 0 )
+              numberOfSinks++;
+      }
+  }
+  catch ( FileNotFoundException e ) {
+   System.err.println( "File " + filename + " not found!" );
+}
+catch ( IOException e ) {
+   System.err.println( "Error reading file " + filename );
+}
+System.err.println( "Read " + fileIndex + " number of documents" );
+return fileIndex;
+}
 
 
-    /* --------------------------------------------- */
+/* --------------------------------------------- */
 
 
     /*
      *   Computes the pagerank of each document.
      */
     void computePagerank( int numberOfDocs ) {
-	//
-	//   YOUR CODE HERE
-	//
+        System.out.println(highestDocNum);
+       //double[][] matrixTrans = new double[highestDocNum][highestDocNum];
+       double matrixJValue = 1/(docNumber.size());
+       
+       double c = 0.85;
+        /*for(int i : link.keySet()){
+            double proba = (out[i] > 0) ? (double) 1 / out[i] : 0;
+            for (int j : link.get(i)){
+                matrixTrans[i][j] = proba * c + ((1-c)*matrixJValue);
+            }
+        }*/
+        boolean converged = false;
+        double[] initVect = new double[highestDocNum+1];
+        initVect[5] = (double)1;
+        double[] tempVect = new double[highestDocNum+1];
+        int iteration = 0;
+        System.out.format("nbre de doc total : %d, nombre de doc retenus : %d", docNumber.values().size(), link.keySet().size());
+        while ((!converged) && ( iteration < 18/*MAX_NUMBER_OF_ITERATIONS*/)){
+            tempVect = initVect.clone();
+            //initVect = matrixProduct(tempVect, matrixTrans);
+            initVect = new double[highestDocNum+1];
+           
+            for(int i : docNumber.values()){
+                double proba = (out[i] > 0) ? (double) 1 / out[i] : 0;
+                for( int j : docNumber.values()){
+                    if ( link.get(i).contains(j)){
+                       // System.out.println(tempVect[i]);
+                        initVect[j] += tempVect[i] * (proba * c + ((1-c)*matrixJValue));
+
+                    }
+                    else{
+                        initVect[j] += tempVect[i] * (0 * c + ((1-c)*matrixJValue));
+                    }
+                    
+                }
+            }
+
+
+           // converged = testConverge(initVect, tempVect);
+            iteration++;
+            System.out.println("Iteration");
+        }
+        
+        if (!converged){
+            LinkedList<PairKeyValue> vectResult = new LinkedList<PairKeyValue>();
+            for(int docID : link.keySet()){
+                vectResult.add(new PairKeyValue(docID,initVect[docID]));
+            }
+            Collections.sort(vectResult);
+            for(int i = 0; i< 50 ; i++){
+                System.out.format(" doc : %s  | %f" , docName[vectResult.get(i).key],vectResult.get(i).value );
+            }
+        }  
+        else{
+            System.out.println("not converged");
+        }
+
+
+   }
+   private boolean testConverge(double [] x, double[] y ){
+        for(int i = 0; i< x.length ; i++){
+            if (((x[i] - y[i]) > EPSILON)  ){
+                return false;
+            }
+        }
+        return true;
+   }
+   private double[] matrixProduct(double[] x, double[][] matrix){
+            double[] result = new double[highestDocNum];
+            for(int i : link.keySet()){
+                for( int j : link.keySet()){
+                    result[j] += x[i] * matrix[i][j];
+                }
+            }
+            return result;
     }
 
+   /* --------------------------------------------- */
 
-    /* --------------------------------------------- */
 
-
-    public static void main( String[] args ) {
-	if ( args.length != 1 ) {
-	    System.err.println( "Please give the name of the link file" );
-	}
-	else {
-	    new PageRank( args[0] );
-	}
-    }
+   public static void main( String[] args ) {
+       if ( args.length != 1 ) {
+           System.err.println( "Please give the name of the link file" );
+       }
+       else {
+           new PageRank( args[0] );
+       }
+   }
 }
