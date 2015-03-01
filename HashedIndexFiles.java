@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
@@ -23,6 +24,7 @@ import java.io.ObjectInputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.Math;
+import java.util.Collections;
 
 /**
  *   Implements an inverted index as a Hashtable from words to PostingsLists.
@@ -187,29 +189,110 @@ public class HashedIndexFiles implements Index, Serializable {
             return null;
         }
 
-        PostingsList listReference = getPostings(query.terms.get(0));
+        
+        
+        ArrayList<String> refTerms = initializeVectors(query);
 
-        int dFt = listReference.size(); 
-            System.out.println(dFt);
-        if(listReference == null){
-            return null;
+        HashMap<Integer, double[]> docVectors= new HashMap<Integer, double[]>();
+        HashMap<Integer, PostingsEntry> termList = new HashMap<Integer, PostingsEntry>();
+
+        for(String term : query.terms){
+            PostingsList listTemp = getPostings(term);
+            //termList.add(listTemp);
+            int positionVect = refTerms.indexOf(term);
+            int dFt = listTemp.size(); 
+
+            if (listTemp == null){
+                continue;
+            }
+            for(int i = 0; i<listTemp.size(); i++){
+                PostingsEntry pe = listTemp.get(i);
+                 double[] tempValue = new double[refTerms.size()];
+                if (docVectors.containsKey(pe.docID)){
+                    tempValue = docVectors.get(pe.docID);
+                }
+                else{
+                    tempValue = new double[refTerms.size()];
+                }
+                int tFdt =  pe.offsetList.size();
+                //System.out.println(tFdt);
+                int lenD = this.docLengths.get(Integer.toString(pe.docID));
+                //System.out.println(lenD);
+                int n = docIDs.keySet().size();
+                //System.out.println(n);
+                double iDFt = Math.log((double)n/dFt);
+                //System.out.println(iDFt);
+                
+                tempValue[positionVect] = ( tFdt * iDFt ) / lenD;
+                 
+                docVectors.put(pe.docID, tempValue);
+                if(!termList.containsKey(pe.docID)){
+                    termList.put(pe.docID, new PostingsEntry(pe.docID, 0, 0));
+                }
+                
+            }
         }
-        for(int i = 0; i< listReference.size(); i++){
-            PostingsEntry temp = listReference.get(i);
-            int tFdt =  temp.offsetList.size();
-            System.out.println(tFdt);
-            int lenD = this.docLengths.get(Integer.toString(temp.docID));
-            System.out.println(lenD);
-            int n = docIDs.keySet().size();
-            System.out.println(n);
-            double iDFt = Math.log((double)n/dFt);
-            System.out.println(iDFt);
-            temp.score = ( tFdt * iDFt ) / lenD;
+        double[] vectorQuery = new double[refTerms.size()];
+        for (int j = 0; j< vectorQuery.length ; j++){
+            vectorQuery[j] = 1;
+        }
+        for(PostingsEntry pe : termList.values()){
+                //double score = cosinusIDF( vectorQuery, docVectors.get(pe.docID));
+                double score = sumIdf(docVectors.get(pe.docID));
+                pe.score = score;
         }
 
-        listReference.sort();
+        //System.out.println(termList.size());
+        PostingsList pl = new PostingsList();
+        for (PostingsEntry pe : termList.values()){
+            pe.score = pe.score / docLengths.get(Integer.toString(pe.docID));
+            pl.insertElement(pe);
+        }
 
-        return listReference;
+        pl.sort();
+
+        return pl;
+        
+    }
+
+    private double cosinusIDF(double[] x, double[] y){
+        double crossProduct = 0;
+
+        double sumx = 0;
+        double sumy = 0;
+
+        for(int i = 0; i< x.length; i++){
+            crossProduct += x[i]*y[i];
+            sumx += x[i] * x[i];
+            sumy += y[i] * y[i];
+        }
+
+       // System.out.println(crossProduct);
+        //System.out.println((Math.sqrt(sumx)*Math.sqrt(sumy)));
+        double result = crossProduct /(Math.sqrt(sumx)*Math.sqrt(sumy));
+
+        return result;
+    }
+
+    private double sumIdf(double[] vect){
+        double result= 0;
+        for(int i = 0; i< vect.length; i++){
+            result += vect[i];
+        }
+
+        return result;
+    }
+
+    private  ArrayList<String> initializeVectors(Query query){
+
+        ArrayList<String> listRow= new ArrayList<String>();
+        for(String term : query.terms){
+            if(!listRow.contains(term)){
+                listRow.add(term);
+            }
+        }
+
+        return listRow;
     }
 
     private PostingsList searchIntersection(Query query, int rankingType, int structureType){

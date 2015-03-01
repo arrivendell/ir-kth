@@ -26,7 +26,14 @@ public class PostingsList implements Serializable {
     public int size() {
      return list.size();
      }
+     public PostingsList(){};
+     public PostingsList( LinkedList<PostingsEntry> inList){
+        list = inList;
+     }
 
+     public boolean containsDocID(int docID){
+        return true;
+     }
      /**  Returns the ith posting */
      public PostingsEntry get( int i ) {
          return list.get( i );
@@ -67,7 +74,9 @@ public class PostingsList implements Serializable {
        //     }
        // }
     }
-
+    public void insertElement(PostingsEntry pe){
+        list.add(pe);
+    }
     //add new doc at the end of the list
     public void addDocument(int docID, double score,  LinkedList<Integer>  listOffset){
             list.add(new PostingsEntry(docID, score, listOffset));
