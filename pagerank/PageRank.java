@@ -164,8 +164,8 @@ return fileIndex;
     void computePagerank( int numberOfDocs ) {
         System.out.println(highestDocNum);
        //double[][] matrixTrans = new double[highestDocNum][highestDocNum];
-       double matrixJValue = 1/(docNumber.size());
-       
+       double matrixJValue = (double)1/(numberOfDocs);
+       System.out.println(matrixJValue);
        double c = 0.85;
         /*for(int i : link.keySet()){
             double proba = (out[i] > 0) ? (double) 1 / out[i] : 0;
@@ -175,40 +175,71 @@ return fileIndex;
         }*/
         boolean converged = false;
         double[] initVect = new double[highestDocNum+1];
-        initVect[5] = (double)1;
+        initVect[0] = (double)1;
         double[] tempVect = new double[highestDocNum+1];
         int iteration = 0;
-        System.out.format("nbre de doc total : %d, nombre de doc retenus : %d", docNumber.values().size(), link.keySet().size());
-        while ((!converged) && ( iteration < 18/*MAX_NUMBER_OF_ITERATIONS*/)){
+        System.out.format("nbre de doc total : %d, nombre de doc retenus : %d", docNumber.values().size(), numberOfDocs);
+        while ((!converged) && ( iteration < 10 MAX_NUMBER_OF_ITERATIONS)){
             tempVect = initVect.clone();
             //initVect = matrixProduct(tempVect, matrixTrans);
             initVect = new double[highestDocNum+1];
            
             for(int i : docNumber.values()){
-                double proba = (out[i] > 0) ? (double) 1 / out[i] : 0;
                 for( int j : docNumber.values()){
-                    if ( link.get(i).contains(j)){
-                       // System.out.println(tempVect[i]);
-                        initVect[j] += tempVect[i] * (proba * c + ((1-c)*matrixJValue));
-
+                    if(out[i]==0){
+                        if (i!=j){
+                            initVect[j] += (double)tempVect[i]   /(double) (numberOfDocs-1);
+                        }
+                       
                     }
                     else{
-                        initVect[j] += tempVect[i] * (0 * c + ((1-c)*matrixJValue));
+                        initVect[j] += tempVect[i] * ((1-c)*matrixJValue);
                     }
-                    
+                }
+            }
+            for(int i : link.keySet()){
+                for( int j : link.get(i))
+                {
+                    double proba = 1 / (double)out[i] ;
+                    if(i==0){
+                        System.out.println(tempVect[i]);
+                    }
+                    initVect[j] += tempVect[i] * (proba *c);
+                   
+                   // System.out.println(tempVect[i]);
                 }
             }
 
+            /*for(int j : docNumber.values()){
+                double sum = 0;
+                for( int i : docNumber.values()){
+                    if(out[i]==0){
+                        if (i!=j){
+                            sum += (double) tempVect[i]  /(double) (numberOfDocs-1);
+                        }
+                       
+                    }
+                    else{
+                        double proba =0;
+                        if(link.get(i) != null){
+                            proba += (double ) c/out[i];
+                        }
+                        proba += (1-c) / numberOfDocs ;
+                        sum += tempVect[i] * proba;
+                    }
+                }
+            }*/
 
-           // converged = testConverge(initVect, tempVect);
+
+            converged = testConverge(initVect, tempVect);
             iteration++;
             System.out.println("Iteration");
         }
         
-        if (!converged){
+        if (converged || !converged){
             LinkedList<PairKeyValue> vectResult = new LinkedList<PairKeyValue>();
-            for(int docID : link.keySet()){
-                vectResult.add(new PairKeyValue(docID,initVect[docID]));
+            for(int docID : docNumber.values()){
+                vectResult.add(new PairKeyValue(docID,initVect[docID]/*/31748*/));
             }
             Collections.sort(vectResult);
             for(int i = 0; i< 50 ; i++){
@@ -223,7 +254,8 @@ return fileIndex;
    }
    private boolean testConverge(double [] x, double[] y ){
         for(int i = 0; i< x.length ; i++){
-            if (((x[i] - y[i]) > EPSILON)  ){
+            double diff = (x[i] - y[i]) > 0 ? (x[i] - y[i]) : (y[i] - x[i]) ;
+            if ((diff> EPSILON)  ){
                 return false;
             }
         }
